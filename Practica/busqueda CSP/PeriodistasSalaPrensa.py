@@ -1,5 +1,5 @@
 from ImprimirResultados_2 import imprimirResultados
-from itertools import permutations
+from itertools import combinations
 
 #--------------------------------------------VARIABLES--------------------------------------------#
 
@@ -33,9 +33,8 @@ def contiguos(variables, valores):
     return set(columnas) == set(columnasContiguas)
 
 Restricciones.append((("CNN1", "CNN2"),contiguos))
-Restricciones.append((("CNN2", "CNN1"),contiguos))
 
-for variables in permutations(("MSNBC1","MSNBC2","MSNBC3"), 3):
+for variables in combinations(("MSNBC1","MSNBC2","MSNBC3"), 3):
     Restricciones.append((variables,contiguos))
 
 
@@ -46,9 +45,8 @@ def noContiguos(variables, valores):
     return condicion
 
 Restricciones.append((("BBC", "Fox"), noContiguos))
-Restricciones.append((("Fox", "BBC"), noContiguos))
 Restricciones.append((("Infobae1","Infobae2"),noContiguos))
-Restricciones.append((("Infobae2","Infobae1"),noContiguos))
+
 
 
 
@@ -75,15 +73,13 @@ def noSentarseCerca(variables, valores):
 
 Restricciones.append((("RT", "CNN1"), noSentarseCerca))
 Restricciones.append((("RT", "CNN2"), noSentarseCerca))
-Restricciones.append((("CNN1", "RT"), noSentarseCerca))
-Restricciones.append((("CNN2", "RT"), noSentarseCerca))
 
 
 
 def noRepetido(variables, valores):
     return valores[0] != valores[1]
 
-for variables in permutations(Variables, 2):
+for variables in combinations(Variables, 2):
     Restricciones.append((variables, noRepetido))
 
 

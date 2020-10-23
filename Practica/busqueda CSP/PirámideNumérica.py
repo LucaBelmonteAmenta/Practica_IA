@@ -1,5 +1,5 @@
 from ImprimirResultados_2 import imprimirResultados
-from itertools import permutations
+from itertools import combinations
 
 #--------------------------------------------VARIABLES--------------------------------------------#
 
@@ -32,7 +32,7 @@ Restricciones = []
 def noRepetidos(variables, valores):
     return valores[0] != valores[1]
 
-for variables_2 in permutations(Variables, 2):
+for variables_2 in combinations(Variables, 2):
     Restricciones.append((variables_2, noRepetidos))
 
 
@@ -53,10 +53,10 @@ for variable in Variables:
         bloqueInferior2 = (filaInferior, columnaInferior2)
 
         Restricciones.append(((variable, bloqueInferior1, bloqueInferior2), resultadoSuma))
-        Restricciones.append(((variable, bloqueInferior2, bloqueInferior1), resultadoSuma))
-        print(variable, bloqueInferior1, bloqueInferior2)
 
 
 #--------------------------------------------RESOLUCION--------------------------------------------#
+
+#Esta pirámide así como está armada en la consigna, no tiene solución
 
 imprimirResultados(Variables, Dominios, Restricciones)
