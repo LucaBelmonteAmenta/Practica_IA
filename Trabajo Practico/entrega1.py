@@ -3,11 +3,30 @@ from simpleai.search import SearchProblem
 PAQUETES = {} # como en el estado haremos referencia a los ids de los paquetes, en este diccionario almacenamos
 # el origen y destino de los mismos.
 
-Ciudades = ('rafaela', 'santa_fe' )
-ConeccionesCiudades = { 'esperanza' : (('recreo',20), ('rafaela',70))}
+
+
+Ciudades_Conecciones = {
+    'rafaela' : (('lehmann', 8), ('esperanza', 70), ('susana', 10)),
+    'santa_fe' : (('recreo', 10), ('santo_tome', 5)),
+    'lehmann' : (('rafaela', 8)),
+    'sunchales' : (('lehmann', 32)),
+    'susana' : (('angelica', 25), ('rafaela', 10)),
+    'santa_clara_de_saguier' : (('angelica', 60)),
+    'angelica' : (('santo_tome', 85), ('san_vicente', 18), ('santa_clara_de_saguier', 60), ('susana', 25)),
+    'san_vicente' : (('angelica', 18)),
+    'esperanza' : (('recreo', 20), ('rafaela', 70)),
+    'recreo' : (('esperanza', 20), ('santa_fe', 10)), 
+    'santo_tome' : (('santa_fe', 5), ('angelica', 85), ('sauce_viejo', 15)), 
+    'sauceviejo' : (('santo_tome', 15))
+}
+
+# Ciudades = Ciudades_Conecciones.keys()   ----------->    ['rafaela', 'santa_fe', ...]
+
 CiudadesSedes = ('rafaela', 'santa_fe')
 
-# Estado = ( ( (IdCamion,litros,ciudad), ), ( (IdPaquete, ciudadOrigen, ciudadDestino), ) )
+# Camion = (IdCamion,litros,ciudad, (Paquete, ))
+# Paquete = (IdPaquete, ciudadOrigen, ciudadDestino)
+# Estado = ( ( Camion, ), ( Paquete que no esta en un camion, ) )
 # Accion = ((IdCamion, CiudadDestino, litrosVieaje, (Idpaquete, )), )
 
 class MercadoArtificialProblem(SearchProblem):
