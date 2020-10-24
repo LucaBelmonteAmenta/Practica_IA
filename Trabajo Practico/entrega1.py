@@ -1,5 +1,11 @@
 from simpleai.search import SearchProblem
 
+Ciudades = ('rafaela', 'santa_fe' )
+ConeccionesCiudades = { 'esperanza' : (('recreo',20), ('rafaela',70))}
+CiudadesSedes = ('rafaela', 'santa_fe')
+
+# Estado = ( ( (IdCamion,litros,ciudad), ), ( (IdPaquete, ciudadOrigen, ciudadDestino), ) )
+# Accion = ((IdCamion, CiudadDestino, litrosVieaje, (Idpaquete, )), )
 
 class MercadoArtificialProblem(SearchProblem):
   
@@ -24,5 +30,5 @@ class MercadoArtificialProblem(SearchProblem):
 
 
 
-def planear_camiones():
+def planear_camiones(metodo, camiones, paquetes):
     pass
