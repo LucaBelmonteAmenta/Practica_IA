@@ -1,9 +1,19 @@
-from simpleai.search import SearchProblem
 from itertools import combinations
+
+from simpleai.search import (
+    SearchProblem, 
+    breadth_first, 
+    depth_first, 
+    uniform_cost,
+    astar,
+    iterative_limited_depth_first
+)
+
 
 PAQUETES = {} # como en el estado haremos referencia a los ids de los paquetes, en este diccionario almacenamos
 # el origen y destino de los mismos.
 
+CAMIONES = {} # tendrá lo que se pasa como parámetro en planear_camiones, camion, origen, capacidadlitros
 
 
 Ciudades_Conecciones = {
@@ -191,15 +201,56 @@ class MercadoArtificialProblem(SearchProblem):
                                 accion = camion.IdCamion, ciudad[0], tuple(listaPaquetesCamion)
                                 acciones.append(accion)
 
-        return acciones
+        return acciones     
 
+    def result(self, state, action):
+        """
+        a partir del estado y de la acción (camion, destino y paquetes que lleva) voy a:
+        - cambiar la ciudad del camion del estado, por la de destino de la accion
+        - a partir de los paquetes que tiene el camion en la acción, actualizo los que tiene el camion en el estado
+        - mover a ciudad de la acción y restar combustible
+        - si queda en estado resultante en una sede, cargo combustible
+
+        Actualizar ciudad del camion y paquetes que lleva. Descontar combustible. Si donde llega es una
+        sede, cargar combustible
+        """
+        camion, destino, paquetes_transportados = action    
+        camiones, paquetes_que_no_estan_en_un_camion = state  
+        # por cada camion (id, litrosdisponibles, ciudad, (paquetes) )
+        paquetes_que_no_estan_en_un_camion = list(paquetes_que_no_estan_en_un_camion)
+        camiones = list(camiones)
+        for c in camiones:
+            c = list(c)
+            # actualizar la ciudad en la que se encuentra el camion de la accion
+            if c[0] == camion:
+                c[2] = destino
+                # ahora analizar los paquetes
+                if paquetes_transportados: # si hay paquetes en la acción
+                    # ver si los paquetes ya están en el camión (en el estado)
+                    paquetes_camion = c[3]
+                    for p in paquetes_transportados:
+                        if p not in paquetes_camion:
+                            # si el paquete no está en el camion, cargarlo 
+                            # sacarlo de la lista de paquetes que no estan en un camion.
+                            c[3].append(p)
+                            paquetes_que_no_estan_en_un_camion.remove(p)
+                        else:
+                            # si el paquete ya estaba en el camión, ver si llegó al destino, sacar del estado
+                            if PAQUETES[p][1] == destino:
+                                c[3].remove(p)                            
                 
-                
-        
+                # ver el combustible que se gastará para llegar al destino, descontarlo
+                litros_viaje = self.cost(state, action, ("vacio"))
+                c[1] -= litros_viaje # c[1] son los litros disponibles del camión
 
-
-    def result(self, state, action):       
-        pass
+                # si el destino es una sede, cargar combustible a capacidad máxima
+                if destino in CiudadesSedes:
+                    c[1] = CAMIONES[c[0]][1]
+            c = tuple(c)
+        camiones = tuple(camiones)
+        paquetes_que_no_estan_en_un_camion = tuple(paquetes_que_no_estan_en_un_camion)
+        estado_resultante = camiones, paquetes_que_no_estan_en_un_camion
+        return estado_resultante
 
 
     def heuristic(self,state):
@@ -216,18 +267,16 @@ class MercadoArtificialProblem(SearchProblem):
 
         return distancia_total/100
 
-
 def planear_camiones(metodo, camiones, paquetes):
     # armar estado inicial en base a camiones y paquetes
-    
-    # Estado = ( (Camion, ), (Paquete que no está en un camion, ) )
-    ESTADO_INICIAL = ()
+    ESTADO_INICIAL = ([], [])
     ESTADO_INICIAL = list(ESTADO_INICIAL)
     detalle_camiones = [] # tendrá los datos que vienen en "camiones", y una tupla vacía inicialmente, que indica los 
     #paquetes que tiene ese camion cargados
     for camion in camiones:
+        CAMIONES[camion[0]] = [camion[1], camion[2]] # guardar en diccionario para usarlo cuando se necesite
         detalle_camiones.append((camion, ())) # () indica que el camion no tiene aun paquetes cargados
-    ESTADO_INICIAL[0] = tuple(detalle_camiones) # convierto la lista a tupla y la almaceno en la primer tupla
+    ESTADO_INICIAL[0].append(tuple(detalle_camiones)) # convierto la lista a tupla y la almaceno en la primer tupla
     #del estado inicial
 
     paquetes_que_no_estan_en_un_camion = [] # inicialmente tendrá todos los id de todos los paquetes
@@ -238,15 +287,46 @@ def planear_camiones(metodo, camiones, paquetes):
         # cada paquete para cuando sea necesario consultarlo
         PAQUETES[id_paquete] = [origen, destino]
 
-    ESTADO_INICIAL[1] = tuple(paquetes_que_no_estan_en_un_camion) # guardar en la segunda tupla del estado
+    ESTADO_INICIAL[1].append(tuple(paquetes_que_no_estan_en_un_camion)) # guardar en la segunda tupla del estado
+    ESTADO_INICIAL[0] = tuple(ESTADO_INICIAL[0])
+    ESTADO_INICIAL[1] = tuple(ESTADO_INICIAL[1])
 
     problema = MercadoArtificialProblem(tuple(ESTADO_INICIAL))#estado inicial armado en base a los camiones y paquetes...)
     result = metodo(problema)
     itinerario = []
+    state1 = ESTADO_INICIAL
     #...armar el itinerario en base a la solución encontrada en result, leyendo result.path(),
     for action, state in result.path():
-        itinerario.append(action) # si tenemos en cuenta la misma estructura para actions, el profe dijo que 
-        # podemos definir como queramos las acciones, de ultima después se cambia dependiendo lo que se haga en actions
-
+        state2 = state
+        # en state1 tengo dónde estaba el camión ANTES
+        camion, destino, paquetes = action
+        combustible_gastado = problema.cost(state1, action, state2)
+        viaje = camion, destino, combustible_gastado, paquetes
+        itinerario.append(viaje)
+        state1 = state2
+   
     return itinerario
 
+
+if __name__ == '__main__':   
+    camiones=[
+        # id, ciudad de origen, y capacidad de combustible máxima (litros)
+        ('c1', 'rafaela', 1.5),
+        ('c2', 'rafaela', 2),
+        ('c3', 'santa_fe', 2),
+    ]
+
+    paquetes=[
+        # id, ciudad de origen, y ciudad de destino
+        ('p1', 'rafaela', 'angelica'),
+        ('p2', 'rafaela', 'santa_fe'),
+        ('p3', 'esperanza', 'susana'),
+        ('p4', 'recreo', 'san_vicente'),
+    ]
+
+    itinerario = planear_camiones(
+        # método de búsqueda a utilizar. Puede ser: astar, breadth_first, depth_first, uniform_cost o greedy
+        breadth_first,camiones,paquetes
+    )
+
+    print(itinerario)
