@@ -25,6 +25,22 @@ Ciudades_Conecciones = {
 
 CiudadesSedes = ('rafaela', 'santa_fe')
 
+# diccionario que especifica a que distancia se encuentra cada ciudad de la sede más cercana
+distancia_a_sedes = {
+    'rafaela' : 0,
+    'santa_fe' : 0,
+    'lehmann' : 8,
+    'sunchales' : 40,
+    'susana' : 10,
+    'santa_clara_de_saguier' : 95,
+    'angelica' : 35,
+    'san_vicente' : 53,
+    'esperanza' : 30,
+    'recreo' : 10, 
+    'santo_tome' : 5, 
+    'sauceviejo' : 20,
+}
+
 
 class Camion:
 
@@ -121,7 +137,19 @@ class MercadoArtificialProblem(SearchProblem):
 
 
     def is_goal(self, state):
-        pass
+        # es goal si todos los camiones repartieron todos los paquetes y se encuentran en una ciudad sede
+        estado = Estado(state)
+        
+        isgoal = True
+        # pregunto si hay paquetes que quedaron pendientes
+        if len(estado.paquetes) != 0:
+            isgoal = False
+        else:
+            # entonces recorro cada camión preguntando si no está en una sede y si quedaron paquetes por entregar
+            for camion in estado.camiones:
+                if camion.ciudad != 'rafaela' or camion.ciudad != 'santa_fe' or len(camion.paquetes)!=0:
+                    isgoal = False
+        return isgoal
 
 
     def actions(self, state):     
@@ -175,8 +203,18 @@ class MercadoArtificialProblem(SearchProblem):
 
 
     def heuristic(self,state):
-        pass
+        # La heurística es el cálculo de cuánto se estima de costo hasta llegar a la meta,
+        # al calcular el costo con los litros que se gastan en cada viaje, entonces deberíamos
+        # calcular lo que falta en litros también.
+        # Tenemos en cuenta la distancia desde la ciudad actual de cada camion hasta alguna ciudad sede.
 
+        estado = Estado(state)
+
+        distancia_total = 0
+        for camion in estado.camiones:
+            distancia_total+=distancia_a_sedes[camion.ciudad]
+
+        return distancia_total/100
 
 
 def planear_camiones(metodo, camiones, paquetes):
