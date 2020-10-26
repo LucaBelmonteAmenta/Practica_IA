@@ -50,77 +50,6 @@ distancia_a_sedes = {
     'sauceviejo' : 20,
 }
 
-class Paquete:
-    
-    def __init__(self, IdPaquete):
-        self.IdPaquete = IdPaquete
-        self.ciudadOrigen = PAQUETES[IdPaquete][0]
-        self.ciudadDestino = PAQUETES[IdPaquete][1]
-
-
-class Camion:
-
-    
-    def __init__(self, IdCamion, ciudad, litros):
-        self.paquetes = []
-        self.IdCamion = IdCamion
-        self.litros = litros
-        self.ciudad = ciudad
-
-    def __str__(self):
-        return str(self.IdCamion)
-
-    def obtenerTuplaPaquetes(self):
-        listaPaquetes = [x.IdPaquete for x in self.paquetes]
-        return tuple(listaPaquetes)
-
-    def tieneSuficienteCombustible(self, litrosDelViaje):
-        return self.litros >= litrosDelViaje
-
-
-class Estado:
-
-    def __init__(self, estado):
-
-        self.camiones = []
-        self.paquetes = []
-        tuplaCamiones, tuplaPaquetes = estado
-        for camion in tuplaCamiones:
-            nuevoCamion = Camion(camion[0],camion[1],camion[2])           
-            for paquete in camion[3]:
-                nuevoPaquete = Paquete(paquete)
-                nuevoCamion.paquetes.append(nuevoPaquete)
-            self.camiones.append(nuevoCamion)
-        
-        for paquete in tuplaPaquetes:
-            nuevoPaquete = Paquete(paquete)
-            self.paquetes.append(nuevoPaquete)
-    
-    def devolverCamionEspesifico(self, IdCamion):
-        for camion in self.camiones:      
-            if (camion.IdCamion == IdCamion):
-                return camion
-
-    def devolverTupla(self):
-        listaCamiones = [] 
-
-        for camion in self.camiones:
-            listaPaquetes = []
-
-            for paquete in camion.paquetes:
-                listaPaquetes.append(paquete.IdPaquete)
-
-            tuplaCamion = camion.IdCamion , camion.litros , camion.ciudad, tuple(listaPaquetes)
-            listaCamiones.append(tuplaCamion) 
-
-        listaPaquetes = []
-
-        for paquete in self.paquetes:
-            listaPaquetes.append(paquete.IdPaquete)
-
-        return (tuple(listaCamiones), tuple(listaPaquetes))
-
-        
 
 # Camion = (IdCamion, ciudad, litros, (Paquete, ))
 # Paquete = (IdPaquete1, IdPaquete2, ...)
@@ -128,56 +57,65 @@ class Estado:
 # Accion = (IdCamion, CiudadDestino, (Idpaquete, ))
 
 
+def devolverCamionEspesifico(state, IdCamionEspesifico):
+    camiones, paquetes_fuera_de_camiones = state
+    for camion in camiones:
+        IdCamion, ciudad, litros, paquetes_del_camion = camion
+        if (IdCamionEspesifico == IdCamion):
+            return camion
 
 class MercadoArtificialProblem(SearchProblem):
   
     def cost(self, state1, action, state2):
-        estado = Estado(state1) 
         IdCamion, CiudadDestino, Paquetes = action
-        camion = estado.devolverCamionEspesifico(IdCamion)
+        camion = devolverCamionEspesifico(state1, IdCamion)
+        IdCamion, ciudad_camion, litros, paquetes_del_camion = camion
         # Busco de la distancia entre la ciudad en la que      #
         # estaba el camión y la ciudad de destino de la acción #
-        for ciudad in Ciudades_Conecciones[camion.ciudad]:                  
+        for ciudad in Ciudades_Conecciones[ciudad_camion]:                  
             if (ciudad[0] == action[1]):
                 distancia = ciudad[1]
                 break
         # Retorno el combustible gastado para dicha distancia a recorrer #
-        return distancia/100
+        costo_viaje = distancia/100
+        return costo_viaje
 
 
     def is_goal(self, state):
         # es goal si todos los camiones repartieron todos los paquetes y se encuentran en una ciudad sede
-        estado = Estado(state)
+        camiones, paquetes_fuera_de_camiones = state
         isgoal = True
         # pregunto si hay paquetes que quedaron pendientes
-        if len(estado.paquetes) != 0:
+        if len(paquetes_fuera_de_camiones) != 0:
             isgoal = False
         else:
             # entonces recorro cada camión preguntando si no está en una sede y si quedaron paquetes por entregar
-            for camion in estado.camiones:
-                if camion.ciudad != 'rafaela' or camion.ciudad != 'santa_fe' or len(camion.paquetes)!=0:
+            for camion in camiones:
+                IdCamion, ciudad, litros, paquetes_del_camion = camion
+                if (ciudad not in CiudadesSedes) or (len(paquetes_del_camion) != 0):
                     isgoal = False
+        
         return isgoal
 
 
     def actions(self, state):     
-        estado = Estado(state)
-    
+        camiones, paquetes_fuera_de_camiones = state
         acciones = []
         
         # Recorro cada camión, y por cada camión, recorro también las ciudades a las que podría ir en este viaje #
-        for camion in estado.camiones:
-           
-            for ciudad in Ciudades_Conecciones[camion.ciudad]:
+        for camion in camiones:           
+            IdCamion, ciudad_camion, litros, paquetes_del_camion = camion
+
+            for ciudad in Ciudades_Conecciones[ciudad_camion]:
                 
                 # Genero la acción del viaje en el caso de que no halla recogido ningún paquete de donde estuvo #
-                listaPaquetesCamion = list(camion.obtenerTuplaPaquetes())
-                accion = camion.IdCamion, ciudad[0], tuple(camion.obtenerTuplaPaquetes())
+                listaPaquetesCamion = list(paquetes_del_camion)
+                accion = IdCamion, ciudad[0], paquetes_del_camion
                 
                 litrosDelViaje = self.cost(state, accion, ("vacio"))
                 # No cargare ninguna accion si el vehiculo no es capaz de afrontar #
                 # el gasto de combustible del viaje que implica dicha accion       #
-                if (camion.tieneSuficienteCombustible(litrosDelViaje)):
+                if (litros >= litrosDelViaje):
 
                     # Cargo la acción del viaje en el caso de que no halla recogido ningún paquete de donde estuvo #
                     acciones.append(accion)
@@ -185,12 +123,13 @@ class MercadoArtificialProblem(SearchProblem):
                     # Recorro cada paquete que no se encuentre en un camion y guardo #
                     # los que podría recoger de la ciudad en la que me encontraba #
                     paquetesTransportables = []
-                    for paquete in estado.paquetes:
-                        paquetesTransportables = []
-                        if (paquete.ciudadOrigen == camion.ciudad):
-                            paquetesTransportables.append(paquete.IdPaquete)
+                    for paquete in paquetes_fuera_de_camiones:
+                        origen_paquete, destino_paquete = PAQUETES[paquete]
 
-                    print("Paquetes transportables: ", paquetesTransportables)
+                        paquetesTransportables = []
+                        if (origen_paquete == ciudad_camion):
+                            paquetesTransportables.append(paquete)
+
                     if (len(paquetesTransportables) > 0):
                         
                         # Genero una accion por cada combinacion posible de paquete recogido #
@@ -200,11 +139,10 @@ class MercadoArtificialProblem(SearchProblem):
 
                         for X in range(1, (len(paquetesTransportables) + 1) ):       
                             for combinaciones in combinations(paquetesTransportables,X): 
-                                listaPaquetesCamion = list(camion.obtenerTuplaPaquetes())
+                                listaPaquetesCamion = list(paquetes_del_camion)
                                 listaPaquetesCamion.extend(combinaciones)
-                                accion = camion.IdCamion, ciudad[0], tuple(listaPaquetesCamion)
-                                acciones.append(accion)
-                            
+                                accion = IdCamion, ciudad[0], tuple(listaPaquetesCamion)
+                                acciones.append(accion)      
         return acciones     
 
 
@@ -269,6 +207,7 @@ class MercadoArtificialProblem(SearchProblem):
         camiones = tuple(nueva_lista_camiones)
         paquetes_que_no_estan_en_un_camion = tuple(paquetes_que_no_estan_en_un_camion)
         estado_resultante = camiones, paquetes_que_no_estan_en_un_camion
+        print(estado_resultante)
         return estado_resultante
 
 
@@ -278,11 +217,12 @@ class MercadoArtificialProblem(SearchProblem):
         # calcular lo que falta en litros también.
         # Tenemos en cuenta la distancia desde la ciudad actual de cada camion hasta alguna ciudad sede.
 
-        estado = Estado(state)
+        camiones, paquetes_fuera_de_camiones = state
 
         distancia_total = 0
-        for camion in estado.camiones:
-            distancia_total+=distancia_a_sedes[camion.ciudad]
+        for camion in camiones:
+            IdCamion, ciudad_camion, litros, paquetes_del_camion = camion
+            distancia_total+=distancia_a_sedes[ciudad_camion]
 
         return distancia_total/100
 
