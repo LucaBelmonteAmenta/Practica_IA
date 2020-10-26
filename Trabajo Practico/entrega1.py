@@ -162,11 +162,12 @@ class MercadoArtificialProblem(SearchProblem):
 
     def actions(self, state):     
         estado = Estado(state)
-        
+    
         acciones = []
         
         # Recorro cada camión, y por cada camión, recorro también las ciudades a las que podría ir en este viaje #
         for camion in estado.camiones:
+           
             for ciudad in Ciudades_Conecciones[camion.ciudad]:
                 
                 # Genero la acción del viaje en el caso de que no halla recogido ningún paquete de donde estuvo #
@@ -189,12 +190,14 @@ class MercadoArtificialProblem(SearchProblem):
                         if (paquete.ciudadOrigen == camion.ciudad):
                             paquetesTransportables.append(paquete.IdPaquete)
 
-
+                    print("Paquetes transportables: ", paquetesTransportables)
                     if (len(paquetesTransportables) > 0):
                         
                         # Genero una accion por cada combinacion posible de paquete recogido #
                         # EJ: Habiendo 3 paquetes, podria cargar en el camion cualquiera de  #
                         #     los 3 o cualquier combinacion de 2, o los tres a la vez.       #
+                        #for p in paquetesTransportables:
+
                         for X in range(1, (len(paquetesTransportables) + 1) ):       
                             for combinaciones in combinations(paquetesTransportables,X): 
                                 listaPaquetesCamion = list(camion.obtenerTuplaPaquetes())
@@ -307,19 +310,31 @@ def planear_camiones(metodo, camiones, paquetes):
     ESTADO_INICIAL.append(tuple(paquetes_que_no_estan_en_un_camion)) # guardar en la segunda tupla del estado
     ESTADO_INICIAL = tuple(ESTADO_INICIAL)
     print("estado inicial = ", ESTADO_INICIAL)
+    
+    METODOS = {
+        'breadth_first': breadth_first,
+        'depth_first': depth_first,
+        'iterative_limited_depth_first': iterative_limited_depth_first,
+        'uniform_cost': uniform_cost,
+        'astar': astar,
+    }
+    
     problema = MercadoArtificialProblem(ESTADO_INICIAL) #estado inicial armado en base a los camiones y paquetes...)
-    result = metodo(problema)
+    result = METODOS[metodo](problema, graph_search=True)
     itinerario = []
     state1 = ESTADO_INICIAL
     #...armar el itinerario en base a la solución encontrada en result, leyendo result.path(),
     for action, state in result.path():
-        state2 = state
-        # en state1 tengo dónde estaba el camión ANTES
-        camion, destino, paquetes = action
-        combustible_gastado = problema.cost(state1, action, state2)
-        viaje = camion, destino, combustible_gastado, paquetes
-        itinerario.append(viaje)
-        state1 = state2
+        if action == None:
+            pass
+        else:
+            state2 = state
+            # en state1 tengo dónde estaba el camión ANTES
+            camion, destino, paquetes = action
+            combustible_gastado = problema.cost(state1, action, state2)
+            viaje = camion, destino, combustible_gastado, paquetes
+            itinerario.append(viaje)
+            state1 = state2
    
     return itinerario
 
@@ -345,7 +360,7 @@ if __name__ == '__main__':
 
     itinerario = planear_camiones(
         # método de búsqueda a utilizar. Puede ser: astar, breadth_first, depth_first, uniform_cost o greedy
-        breadth_first,camiones,paquetes
+        "breadth_first",camiones,paquetes
     )
 
     print(itinerario)
