@@ -16,21 +16,21 @@ PAQUETES = {} # como en el estado haremos referencia a los ids de los paquetes, 
 CAMIONES = {} # tendrá lo que se pasa como parámetro en planear_camiones, camion, origen, capacidadlitros
 
 
-Ciudades_Conecciones = {
+Ciudades_Conexiones = {
     'rafaela' : (('lehmann', 8), ('esperanza', 70), ('susana', 10)),
     'santa_fe' : (('recreo', 10), ('santo_tome', 5)),
-    'lehmann' : (('rafaela', 8),),
+    'lehmann' : (('rafaela', 8),('sunchales', 32),),
     'sunchales' : (('lehmann', 32),),
     'susana' : (('angelica', 25), ('rafaela', 10)),
-    'santa_clara_de_saguier' : (('angelica', 60),),
-    'angelica' : (('santo_tome', 85), ('san_vicente', 18), ('santa_clara_de_saguier', 60), ('susana', 25)),
+    'sc_de_saguier' : (('angelica', 60),),
+    'angelica' : (('santo_tome', 85), ('san_vicente', 18), ('sc_de_saguier', 60), ('susana', 25)),
     'san_vicente' : (('angelica', 18),),
     'esperanza' : (('recreo', 20), ('rafaela', 70)),
     'recreo' : (('esperanza', 20), ('santa_fe', 10)), 
     'santo_tome' : (('santa_fe', 5), ('angelica', 85), ('sauce_viejo', 15)), 
     'sauce_viejo' : (('santo_tome', 15),)
 }
-# Ciudades = Ciudades_Conecciones.keys()   ----------->    ['rafaela', 'santa_fe', ...]
+# Ciudades = Ciudades_Conexiones.keys()   ----------->    ['rafaela', 'santa_fe', ...]
 
 CiudadesSedes = ('rafaela', 'santa_fe')
 
@@ -41,13 +41,13 @@ distancia_a_sedes = {
     'lehmann' : 8,
     'sunchales' : 40,
     'susana' : 10,
-    'santa_clara_de_saguier' : 95,
+    'sc_de_saguier' : 95,
     'angelica' : 35,
     'san_vicente' : 53,
     'esperanza' : 30,
     'recreo' : 10, 
     'santo_tome' : 5, 
-    'sauceviejo' : 20,
+    'sauce_viejo' : 20,
 }
 
 
@@ -72,12 +72,14 @@ class MercadoArtificialProblem(SearchProblem):
         IdCamion, ciudad_camion, litros, paquetes_del_camion = camion
         # Busco de la distancia entre la ciudad en la que      #
         # estaba el camión y la ciudad de destino de la acción #
-        for ciudad in Ciudades_Conecciones[ciudad_camion]:                  
+        for ciudad in Ciudades_Conexiones[ciudad_camion]:                  
             if (ciudad[0] == action[1]):
                 distancia = ciudad[1]
                 break
         # Retorno el combustible gastado para dicha distancia a recorrer #
+       
         costo_viaje = distancia/100
+        
         return costo_viaje
 
 
@@ -106,7 +108,7 @@ class MercadoArtificialProblem(SearchProblem):
         for camion in camiones:           
             IdCamion, ciudad_camion, litros, paquetes_del_camion = camion
 
-            for ciudad in Ciudades_Conecciones[ciudad_camion]:
+            for ciudad in Ciudades_Conexiones[ciudad_camion]:
                 
                 # Genero la acción del viaje en el caso de que no halla recogido ningún paquete de donde estuvo #
                 listaPaquetesCamion = list(paquetes_del_camion)
@@ -123,13 +125,15 @@ class MercadoArtificialProblem(SearchProblem):
                     # Recorro cada paquete que no se encuentre en un camion y guardo #
                     # los que podría recoger de la ciudad en la que me encontraba #
                     paquetesTransportables = []
+                   
                     for paquete in paquetes_fuera_de_camiones:
                         origen_paquete, destino_paquete = PAQUETES[paquete]
 
-                        paquetesTransportables = []
+                        #paquetesTransportables = []
                         if (origen_paquete == ciudad_camion):
                             paquetesTransportables.append(paquete)
 
+                   
                     if (len(paquetesTransportables) > 0):
                         
                         # Genero una accion por cada combinacion posible de paquete recogido #
@@ -143,6 +147,7 @@ class MercadoArtificialProblem(SearchProblem):
                                 listaPaquetesCamion.extend(combinaciones)
                                 accion = IdCamion, ciudad[0], tuple(listaPaquetesCamion)
                                 acciones.append(accion)      
+        
         return acciones     
 
 
@@ -207,7 +212,7 @@ class MercadoArtificialProblem(SearchProblem):
         camiones = tuple(nueva_lista_camiones)
         paquetes_que_no_estan_en_un_camion = tuple(paquetes_que_no_estan_en_un_camion)
         estado_resultante = camiones, paquetes_que_no_estan_en_un_camion
-        print(estado_resultante)
+       
         return estado_resultante
 
 
@@ -249,8 +254,7 @@ def planear_camiones(metodo, camiones, paquetes):
 
     ESTADO_INICIAL.append(tuple(paquetes_que_no_estan_en_un_camion)) # guardar en la segunda tupla del estado
     ESTADO_INICIAL = tuple(ESTADO_INICIAL)
-    print("estado inicial = ", ESTADO_INICIAL)
-    
+   
     METODOS = {
         'breadth_first': breadth_first,
         'depth_first': depth_first,
@@ -279,28 +283,13 @@ def planear_camiones(metodo, camiones, paquetes):
     return itinerario
 
 
-
-
 if __name__ == '__main__':   
-    camiones=[
-        # id, ciudad de origen, y capacidad de combustible máxima (litros)
-        ('c1', 'rafaela', 1.5),
-        ('c2', 'rafaela', 2),
-        ('c3', 'santa_fe', 2),
-    ]
 
-    paquetes=[
-        # id, ciudad de origen, y ciudad de destino
-        ('p1', 'rafaela', 'angelica'),
-        ('p2', 'rafaela', 'santa_fe'),
-        ('p3', 'esperanza', 'susana'),
-        ('p4', 'recreo', 'san_vicente'),
-    ]
-    
-
+    camiones = [('c_normal', 'rafaela', 1.5),]
+    paquetes = [('p_normal', 'rafaela', 'lehmann'), ('p_pasando_normal', 'rafaela', 'sunchales')]
     itinerario = planear_camiones(
         # método de búsqueda a utilizar. Puede ser: astar, breadth_first, depth_first, uniform_cost o greedy
         "breadth_first",camiones,paquetes
     )
 
-    print(itinerario)
+    print("ITINERARIO: ",itinerario)
