@@ -9,12 +9,10 @@ from simpleai.search import (
     iterative_limited_depth_first
 )
 
-
 PAQUETES = {} # como en el estado haremos referencia a los ids de los paquetes, en este diccionario almacenamos
 # el origen y destino de los mismos.
 
 CAMIONES = {} # tendrá lo que se pasa como parámetro en planear_camiones, camion, origen, capacidadlitros
-
 
 Ciudades_Conexiones = {
     'rafaela' : (('lehmann', 8), ('esperanza', 70), ('susana', 10)),
@@ -30,7 +28,6 @@ Ciudades_Conexiones = {
     'santo_tome' : (('santa_fe', 5), ('angelica', 85), ('sauce_viejo', 15)), 
     'sauce_viejo' : (('santo_tome', 15),)
 }
-# Ciudades = Ciudades_Conexiones.keys()   ----------->    ['rafaela', 'santa_fe', ...]
 
 CiudadesSedes = ('rafaela', 'santa_fe')
 
@@ -51,32 +48,32 @@ distancia_a_sedes = {
 }
 
 
-# Camion = (IdCamion, ciudad, litros)
+# Camion = (IdCamion, ciudad, litrosActuales)
 # Paquetes = ((IdPaquete,ubicacionActual), (IdPaquete,ubicacionActual), ...)
-# Estado = ( ( Camion, ), ( Paquete que no esta en un camion, ) )
+# Estado = ( ( Camion, ), ( Paquetes que no llegaron a su destino, ) )
 # Accion = (IdCamion, CiudadDestino, (Idpaquete, ))
 
-
-def devolverCamionEspesifico(state, IdCamionEspesifico):
+# a partir del id de un camión, devuelve la tupla de un camión
+def devolverCamionEspecifico(state, IdCamionEspecifico):
     camiones, paquetes = state
     for camion in camiones:
         IdCamion, ciudad, litros = camion
-        if (IdCamionEspesifico == IdCamion):
+        if (IdCamionEspecifico == IdCamion):
             return camion
 
 class MercadoArtificialProblem(SearchProblem):
   
     def cost(self, state1, action, state2):
         IdCamion, CiudadDestino, Paquetes = action
-        camion = devolverCamionEspesifico(state1, IdCamion)
+        camion = devolverCamionEspecifico(state1, IdCamion)
         IdCamion, ciudad_camion, litros = camion
-        # Busco de la distancia entre la ciudad en la que      #
-        # estaba el camión y la ciudad de destino de la acción #
+        # Busco de la distancia entre la ciudad en la que     
+        # estaba el camión y la ciudad de destino de la acción 
         for ciudad in Ciudades_Conexiones[ciudad_camion]:                  
             if (ciudad[0] == action[1]):
                 distancia = ciudad[1]
                 break
-        # Retorno el combustible gastado para dicha distancia a recorrer #
+        # Retorno el combustible gastado para dicha distancia a recorrer 
        
         costo_viaje = distancia/100
         
@@ -103,38 +100,37 @@ class MercadoArtificialProblem(SearchProblem):
     def actions(self, state):     
         camiones, paquetes = state
         acciones = []
-        
-        # Recorro cada camión, y por cada camión, recorro también las ciudades a las que podría ir en este viaje #
+        # serán tuplas con idcamión, destino, paquetes que transporta
+        # Recorro cada camión, y por cada camión, recorro también las ciudades a las que podría ir en este viaje 
         for camion in camiones:           
             IdCamion, ciudad_camion, litros = camion
 
             for ciudad in Ciudades_Conexiones[ciudad_camion]:
                 
-                # Genero la acción del viaje en el caso de que no halla recogido ningún paquete de donde estuvo #
+                # Genero la acción del viaje en el caso de que no haya recogido ningún paquete de donde estuvo 
                 paquetesTransportables = []
                 accion = IdCamion, ciudad[0], tuple(paquetesTransportables)
                 
                 litrosDelViaje = self.cost(state, accion, ("vacio"))
-                # No cargare ninguna accion si el vehiculo no es capaz de afrontar #
-                # el gasto de combustible del viaje que implica dicha accion       #
+                # No cargare ninguna accion si el vehiculo no es capaz de afrontar 
+                # el gasto de combustible del viaje que implica dicha accion       
                 if (litros >= litrosDelViaje):
 
-                    # Cargo la acción del viaje en el caso de que no halla recogido ningún paquete de donde estuvo #
+                    # Cargo la acción del viaje 
                     acciones.append(accion)
                    
+                    # recorrer los paquetes pendientes
                     for paquete in paquetes:
                         idPaquete, ubicacionActual = paquete
+                        # ver si está en la ciudad en la que se encuentra el camión, si es así, agregar a paquetesTransportables
                         if (ubicacionActual == ciudad_camion):
                             paquetesTransportables.append(paquete[0])
-
-                   
-                    if (len(paquetesTransportables) > 0):
-                        
-                        # Genero una accion por cada combinacion posible de paquete recogido #
-                        # EJ: Habiendo 3 paquetes, podria cargar en el camion cualquiera de  #
-                        #     los 3 o cualquier combinacion de 2, o los tres a la vez.       #
-                        #for p in paquetesTransportables:
-
+                    
+                    # si hay paquetes en esa ciudad
+                    if (len(paquetesTransportables) > 0):               
+                        # Genero una accion por cada combinacion posible de paquete recogido 
+                        # EJ: Habiendo 3 paquetes, podria cargar en el camion cualquiera de  
+                        #     los 3 o cualquier combinacion de 2, o los tres a la vez.       
                         for X in range(1, (len(paquetesTransportables) + 1) ):       
                             for combinaciones in combinations(paquetesTransportables,X): 
                                 lista_a_transportar = tuple(combinaciones)
@@ -148,37 +144,30 @@ class MercadoArtificialProblem(SearchProblem):
         """
         a partir del estado y de la acción (camion, destino y paquetes que lleva) voy a:
         - cambiar la ciudad del camion del estado, por la de destino de la accion
-        - a partir de los paquetes que tiene el camion en la acción, actualizo los que tiene el camion en el estado
+        - sacar un paquete del estado si ya llegó a su destino real
         - mover a ciudad de la acción y restar combustible
         - si queda en estado resultante en una sede, cargo combustible
-
-        Actualizar ciudad del camion y paquetes que lleva. Descontar combustible. Si donde llega es una
-        sede, cargar combustible
-        """
-        
+        """     
         camion, destino, paquetes_transportados = action    
         camiones, paquetes = state  
-        # por cada camion (id, litrosdisponibles, ciudad, (paquetes) )
-
+         # Creamos una una lista de paquetes que solo tenga los paquetes que no estan en el destino
         listaPaquetes = []
-
-        # Creamos una una lista de paquetes que solo tenga los paquetes que no estan en el destino
-            
+        
         for paquete in paquetes:
-            # Modifico la ubicacion de los paquetes que sa van a transaportar
+            # Modifico la ubicacion de los paquetes que se van a transaportar
             
             if (paquete[0] in paquetes_transportados):
                 nuevopaquete = (paquete[0],destino)
+                # si el destino del paquete es diferente al destino real, lo agrego a la lista de paquetes pendientes
                 if (nuevopaquete[1] != PAQUETES[paquete[0]][1]):
                     listaPaquetes.append(nuevopaquete)
             else:
+                # si el paquete no está en destino real ni en paquetes_transportados, también lo agrego a paquetes pendientes
                 if (paquete[1] != PAQUETES[paquete[0]][1]):
                     listaPaquetes.append(paquete)
-
-        
-        
+      
         listaCamiones = list(camiones)
-        camion_accion = devolverCamionEspesifico(state, camion)
+        camion_accion = devolverCamionEspecifico(state, camion)
         listaCamiones.remove(camion_accion)
         camion_accion = list(camion_accion)
         # ver el combustible que se gastará para llegar al destino, descontarlo
@@ -189,6 +178,7 @@ class MercadoArtificialProblem(SearchProblem):
             camion_accion[2] = CAMIONES[camion_accion[0]][1]
         else:
             camion_accion[2] -= litros_viaje # c[1] son los litros disponibles del camión
+
         # actualizar la ciudad en la que se encuentra el camion de la accion    
         camion_accion[1] = destino
         listaCamiones.append(tuple(camion_accion))
@@ -197,48 +187,42 @@ class MercadoArtificialProblem(SearchProblem):
         return estado_resultante
 
 
-    def heuristic(self,state):
-        # La heurística es el cálculo de cuánto se estima de costo hasta llegar a la meta,
-        # al calcular el costo con los litros que se gastan en cada viaje, entonces deberíamos
-        # calcular lo que falta en litros también.
-        # Tenemos en cuenta la distancia desde la ciudad actual de cada camion hasta alguna ciudad sede.
-
+    def heuristic(self,state):       
         camiones, paquetes = state
-
         distancia_total = 0
+        # combustible que le demanda a cada camión del estado para llegar a la sede más cercana
         for camion in camiones:
             IdCamion, ciudad_camion, litros = camion
             distancia_total+=distancia_a_sedes[ciudad_camion]
 
+        # destinos distintos de los paquetes * combustible viaje mas corto
         destinos_paquetes = []
         for paquete in paquetes:
             destinos_paquetes.append(PAQUETES[paquete[0]][1])
 
-
         return (distancia_total/100) + (len(set(destinos_paquetes))* 0.05)
+
 
 def planear_camiones(metodo, camiones, paquetes):
     # armar estado inicial en base a camiones y paquetes
     ESTADO_INICIAL = []
-    detalle_camiones = [] # tendrá los datos que vienen en "camiones", y una tupla vacía inicialmente, que indica los 
-    #paquetes que tiene ese camion cargados
+    detalle_camiones = [] # tendrá los datos que vienen en "camiones" (idcamion, origen, combustible máximo)
     for camion in camiones:
-        CAMIONES[camion[0]] = [camion[1], camion[2]] # guardar en diccionario para usarlo cuando se necesite
+        CAMIONES[camion[0]] = [camion[1], camion[2]] # guardar en diccionario 
         listaCamion = list(camion)
-        detalle_camiones.append(tuple(listaCamion)) # () indica que el camion no tiene aun paquetes cargados
+        detalle_camiones.append(tuple(listaCamion)) 
     ESTADO_INICIAL.append(tuple(detalle_camiones)) # convierto la lista a tupla y la almaceno en la primer tupla
     #del estado inicial
     
-    paquetes_estado = [] # inicialmente tendrá todos los id de todos los paquetes
+    paquetes_estado = [] # inicialmente tendrá todos los ids de todos los paquetes y la ciudad de origen (id, ubicacion actual)
     for paquete in paquetes:
-        id_paquete, origen, destino = paquete
-        paquetes_estado.append((id_paquete, origen))
-        # en una variable global que puede ser un diccionario PAQUETES, guardamos   #
-        # el origen y destino de cada paquete para cuando sea necesario consultarlo #
-        PAQUETES[id_paquete] = [origen, destino]
+        id_paquete, origen, destino = paquete # nos llegan estos datos en la tupla paquete
+        paquetes_estado.append((id_paquete, origen)) 
+        PAQUETES[id_paquete] = [origen, destino] # diccionario con origen y destino de paquetes
     
     ESTADO_INICIAL.append(tuple(paquetes_estado)) # guardar en la segunda tupla del estado
     ESTADO_INICIAL = tuple(ESTADO_INICIAL)
+
     METODOS = {
         'breadth_first': breadth_first,
         'depth_first': depth_first,
@@ -246,19 +230,23 @@ def planear_camiones(metodo, camiones, paquetes):
         'uniform_cost': uniform_cost,
         'astar': astar,
     }
-    problema = MercadoArtificialProblem(ESTADO_INICIAL) #estado inicial armado en base a los camiones y paquetes...)
+    problema = MercadoArtificialProblem(ESTADO_INICIAL) 
     result = METODOS[metodo](problema, graph_search=True)
     itinerario = []
     state1 = ESTADO_INICIAL
     #...armar el itinerario en base a la solución encontrada en result, leyendo result.path(),
+
+    # Accion = (IdCamion, CiudadDestino, (Idpaquete, ))
     for action, state in result.path():
         if action == None:
             pass
         else:
+            # state es el estado que se obtiene a partir de la accion
             state2 = state
-            # en state1 tengo dónde estaba el camión ANTES
+            # en state1 tengo dónde estaba el camión ANTES de la acción
             camion, destino, paquetes = action
             combustible_gastado = problema.cost(state1, action, state2)
+            # armamos cada viaje a partir de la acción y el combustible gastado
             viaje = camion, destino, combustible_gastado, paquetes
             itinerario.append(viaje)
             state1 = state2
